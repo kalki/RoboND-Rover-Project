@@ -17,7 +17,7 @@ def convert_to_float(string_to_convert):
 
 def update_rover(rover, data):
     # Initialize start time and sample positions
-    if rover.start_time is None:
+    if rover.start_time == None:
         rover.start_time = time.time()
         rover.total_time = 0
         samples_xpos = np.int_([convert_to_float(pos.strip()) for pos in data["samples_x"].split(';')])
@@ -114,6 +114,7 @@ def create_output_images(rover):
     # Next figure out how many of those correspond to ground truth pixels
     good_nav_pix = np.float(len(((plotmap[:, :, 2] > 0) & (rover.ground_truth[:, :, 1] > 0)).nonzero()[0]))
     # Next find how many do not correspond to ground truth pixels
+    bad_nav_pix = np.float(len(((plotmap[:, :, 2] > 0) & (rover.ground_truth[:, :, 1] == 0)).nonzero()[0]))
     # Grab the total number of map pixels
     tot_map_pix = np.float(len((rover.ground_truth[:, :, 1].nonzero()[0])))
     # Calculate the percentage of ground truth map that has been successfully found
