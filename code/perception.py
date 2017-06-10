@@ -143,7 +143,6 @@ def perspect_transform(img, border_mask=(0, 0, 255)):
 # Apply the above functions in succession and update the Rover state accordingly
 def perception_step(rover):
     # Perform perception steps to update Rover()
-    # TODO: 
     # NOTE: camera image is coming to you in Rover.img
     # 1) Define source and destination points for perspective transform
     # 2) Apply perspective transform
@@ -189,10 +188,12 @@ def perception_step(rover):
     nav.render_image(rover.vision_image[:, :, 1], nav.L_FRONT_FAR, 127, None, None)
     nav.render_image(rover.vision_image[:, :, 1], nav.L_EDGE_CLOSE, 63, None, None)
     nav.render_image(rover.vision_image[:, :, 1], nav.L_EDGE_FAR, 127, None, None)
+    nav.render_image(rover.vision_image[:, :, 1], nav.L_GUIDE, 63, None, None)
     nav.render_image(rover.vision_image[:, :, 1], nav.R_FRONT_CLOSE, 127, None, None)
     nav.render_image(rover.vision_image[:, :, 1], nav.R_FRONT_FAR, 63, None, None)
     nav.render_image(rover.vision_image[:, :, 1], nav.R_EDGE_CLOSE, 127, None, None)
     nav.render_image(rover.vision_image[:, :, 1], nav.R_EDGE_FAR, 63)
+    nav.render_image(rover.vision_image[:, :, 1], nav.R_GUIDE, 127)
     rover.vision_image[:, :, 2] = __navigatable * 255
 
     # Update obstacles to red channel of world map

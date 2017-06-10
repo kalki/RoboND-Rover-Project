@@ -72,13 +72,7 @@ class RoverState:
         self.picking_up = 0  # Will be set to telemetry value data["picking_up"]
         self.send_pickup = False  # Set to True to trigger rock pickup
 
-        # Added
-        self.vel_history = np.array([-1.1, -1.1, -1.1])
-        self.last_yaw = -1
-        self.last_time = -1
-        self.frame_count = 0
-
-# Initialize our rover 
+# Initialize our rover
 Rover = RoverState()
 
 # Variables to track frames per second (FPS)
@@ -88,15 +82,12 @@ frame_counter = 0
 second_counter = time.time()
 fps = None
 
-last_update_time = time.time()
-image_update_interval = 0
-
 
 # Define telemetry function for what to do with incoming data
 @sio.on('telemetry')
 def telemetry(sid, data):
 
-    global frame_counter, second_counter, fps, last_update_time, image_update_interval
+    global frame_counter, second_counter, fps
     frame_counter += 1
     # Do a rough calculation of frames per second (FPS)
     if (time.time() - second_counter) > 1:
@@ -119,19 +110,16 @@ def telemetry(sid, data):
             out_image_string1 = ''
             out_image_string2 = ''
             # Create output images to send to server
-            if second_counter - last_update_time >= image_update_interval:
-                out_image_string1, out_image_string2 = create_output_images(Rover)
-                last_update_time = second_counter
+            out_image_string1, out_image_string2 = create_output_images(Rover)
 
             # The action step!  Send commands to the rover!
-            commands = (Rover.throttle, Rover.brake, Rover.steer)
-            send_control(commands, out_image_string1, out_image_string2)
- 
-            # If in a state where want to pickup a rock send pickup command
             if Rover.send_pickup and not Rover.picking_up:
                 send_pickup()
-                # Reset Rover flags
                 Rover.send_pickup = False
+            else:
+                commands = (Rover.throttle, Rover.brake, Rover.steer)
+                send_control(commands, out_image_string1, out_image_string2)
+ 
         # In case of invalid telemetry, send null commands
         else:
 

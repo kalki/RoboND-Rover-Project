@@ -132,3 +132,6 @@ class TestStringMethods(unittest.TestCase):
                     self.assertFalse(na.is_area_normal(name))
                     self.assertTrue(na.is_area_open(name))
                     self.assertTrue(na.is_area_clear(name))
+
+if __name__ == '__main__':
+    unittest.main()
