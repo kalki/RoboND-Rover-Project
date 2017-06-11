@@ -107,8 +107,6 @@ def telemetry(sid, data):
             Rover = perception_step(Rover)
             Rover = decision_step(Rover)
 
-            out_image_string1 = ''
-            out_image_string2 = ''
             # Create output images to send to server
             out_image_string1, out_image_string2 = create_output_images(Rover)
 
