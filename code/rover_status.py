@@ -67,6 +67,9 @@ class RoverStatus(object):
     def get_navigation_image(self):
         return self.rover.vision_image[:, :, 2]
 
+    def get_rock_image(self):
+        return self.rover.vision_image[:, :, 1]
+
     def is_not_moving(self):
         __pos_not_change = (np.max(np.abs(self.x_pos - np.mean(self.x_pos))) < 0.1
                             and np.max(np.abs(self.y_pos - np.mean(self.y_pos))) < 0.1)

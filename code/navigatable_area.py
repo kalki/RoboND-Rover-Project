@@ -3,15 +3,15 @@ import numpy as np
 from rectangle import Rectangle
 
 # Left area ahead of rover with some space, no in use now
-L_IMPACT = Rectangle(150, 135, 159, 154)
+L_IMPACT = Rectangle(151, 135, 159, 154)
 # Left area ahead of impact area, to detect front edge
-L_FRONT_CLOSE = Rectangle(150, 125, 159, 134)
-L_FRONT_FAR = Rectangle(150, 105, 159, 124)
+L_FRONT_CLOSE = Rectangle(151, 125, 159, 134)
+L_FRONT_FAR = Rectangle(151, 105, 159, 124)
 # Area left to impact area, to follow edge
-L_EDGE_CLOSE = Rectangle(140, 135, 149, 144)
-L_EDGE_FAR = Rectangle(140, 125, 149, 134)
+L_EDGE_CLOSE = Rectangle(141, 135, 150, 144)
+L_EDGE_FAR = Rectangle(141, 125, 150, 134)
 # Area left to left edge area, no in use now
-L_GUIDE = Rectangle(130, 125, 139, 134)
+L_GUIDE = Rectangle(131, 125, 140, 134)
 # Right area ahead of rover with some space, no in use now
 R_IMPACT = Rectangle(160, 135, 169, 154)
 # Right area ahead of impact area, to detect front edge
@@ -58,12 +58,22 @@ OPEN_THRESHOLD = 70
 CLEAR_THRESHOLD = 95
 
 
-def render_image(img, area, increment, min_value=0, max_value=255):
-    __area = area
-    if not __area.is_contained(img.shape):
-        return -1
+def render_image(img, max_increment, min_value=0, max_value=255):
+    inc1 = max_increment
+    inc2 = max_increment / 2
 
-    img[__area.y1:__area.y2+1, __area.x1:__area.x2+1] += increment
+    __render_image(img, L_IMPACT, inc1)
+    __render_image(img, L_FRONT_CLOSE, inc2)
+    __render_image(img, L_FRONT_FAR, inc1)
+    __render_image(img, L_EDGE_CLOSE, inc2)
+    __render_image(img, L_EDGE_FAR, inc1)
+    __render_image(img, L_GUIDE, inc2)
+    __render_image(img, R_IMPACT, inc2)
+    __render_image(img, R_FRONT_CLOSE, inc1)
+    __render_image(img, R_FRONT_FAR, inc2)
+    __render_image(img, R_EDGE_CLOSE, inc1)
+    __render_image(img, R_EDGE_FAR, inc2)
+    __render_image(img, R_GUIDE, inc1)
 
     if min_value is not None and max_value is not None:
         np.clip(img, min_value, max_value, out=img)
@@ -75,6 +85,14 @@ def render_image(img, area, increment, min_value=0, max_value=255):
     elif max_value is not None:
         __min = np.amin(img)
         np.clip(img, __min, max_value, out=img)
+
+
+def __render_image(img, area, increment):
+    __area = area
+    if not __area.is_contained(img.shape):
+        return -1
+
+    img[__area.y1:__area.y2+1, __area.x1:__area.x2+1] += increment
 
     return 0
 

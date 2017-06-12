@@ -6,6 +6,7 @@ MODE_FOLLOW_LEFT = 'follow_left'
 MODE_AVOID_FIX_ANGEL = 'roll_avoid'
 MODE_AVOID = 'avoid'
 MODE_STOP = 'stop'
+MODE_ROCK_APPROACH = 'rock_approach'
 
 LEFT_STEEL = 7.5
 RIGHT_STEEL = -7.5
@@ -21,6 +22,7 @@ class RoverController(object):
     MODE_AVOID_FIX_ANGEL = MODE_AVOID_FIX_ANGEL
     MODE_AVOID = MODE_AVOID
     MODE_STOP = MODE_STOP
+    MODE_ROCK_APPROACH = MODE_ROCK_APPROACH
 
     def __init__(self, rover, rover_status):
         self.rover = rover
@@ -44,6 +46,18 @@ class RoverController(object):
             self.rover.throttle = 0
             self.rover.brake = 0
 
+    def speed_limit(self, speed_rate=1.0):
+
+        if self.rover.vel > self.rover.max_vel * speed_rate * 1.5:
+            self.rover.throttle = 0
+            self.rover.brake = self.rover.brake_set
+        elif self.rover.vel < self.rover.max_vel * speed_rate:
+            self.rover.throttle = self.rover.throttle_set
+            self.rover.brake = 0
+        else:
+            self.rover.throttle = 0
+            self.rover.brake = 0
+
     def direction_straight(self):
         self.rover.steer = 0
 
@@ -58,6 +72,9 @@ class RoverController(object):
 
     def direction_hard_right(self):
         self.rover.steer = HARD_RIGHT_STEEL
+
+    def direction_to(self, angle):
+        self.rover.steer = np.clip(angle * 180 / np.pi, -15, 15)
 
     def direction_navigatable(self):
         self.rover.steer = np.clip(np.mean(self.rover.nav_angles * 180 / np.pi), -15, 15)
@@ -80,6 +97,11 @@ class RoverController(object):
         self.speed_brake()
         self.rover_status.snapshot()
         self.rover.mode = MODE_AVOID_FIX_ANGEL
+
+    def mode_to_rock_approach(self):
+        print("Switch to ROCK APP")
+        self.speed_brake()
+        self.rover.mode = MODE_ROCK_APPROACH
 
     def mode_to_find_left(self):
         print("Switch to FIND LEFT")

@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 
+import rock_locator as ro
 import navigatable_area as nav
 
 # RECORDED_PATH
@@ -183,17 +184,9 @@ def perception_step(rover):
 
     # Update Rover.vision_image
     rover.vision_image[:, :, 0] = __obstacles * 255
-    rover.vision_image[:, :, 1] = __rock * 255
-    nav.render_image(rover.vision_image[:, :, 1], nav.L_FRONT_CLOSE, 63, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.L_FRONT_FAR, 127, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.L_EDGE_CLOSE, 63, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.L_EDGE_FAR, 127, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.L_GUIDE, 63, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.R_FRONT_CLOSE, 127, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.R_FRONT_FAR, 63, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.R_EDGE_CLOSE, 127, None, None)
-    nav.render_image(rover.vision_image[:, :, 1], nav.R_EDGE_FAR, 63)
-    nav.render_image(rover.vision_image[:, :, 1], nav.R_GUIDE, 127)
+    nav.render_image(rover.vision_image[:, :, 0], 127, 0, 255)
+    rover.vision_image[:, :, 1] = np.zeros_like(__rock)
+    ro.render_rock(rover.vision_image[:, :, 1], __rock, 255, 0, 255)
     rover.vision_image[:, :, 2] = __navigatable * 255
 
     # Update obstacles to red channel of world map
