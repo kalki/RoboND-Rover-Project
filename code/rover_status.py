@@ -1,9 +1,11 @@
 import numpy as np
 import time
 from queue import Queue
+import navigatable_area as nav
+from navigatable_area import NavigationArea
 
 ROVER_STABLE_ANGLE_RANGE = 5
-OLD_WAY_THRESHOLD = 30
+OLD_WAY_THRESHOLD = 40
 OLD_WAY_COOLDDOWN = 60
 
 
@@ -23,6 +25,7 @@ class RoverStatus(object):
 
     def __init__(self, rover):
         self.rover = rover
+        self.na = NavigationArea(self.get_navigation_image())
 
     def reset_status(self):
         self.last_update_time[0] = -1.0
@@ -113,8 +116,8 @@ class RoverStatus(object):
             self.yaw.append(__yaw)
             self.last_update_time[0] = __time
 
-            __x = int(__x / 2) * 3
-            __y = int(__y / 2) * 3
+            __x = int(__x / 4) * 4
+            __y = int(__y / 4) * 4
             __yaw = int(__yaw / 15) * 15
             __current_action = (__x, __y, __yaw)
             self.action_buffer.put(__current_action)
@@ -149,3 +152,23 @@ class RoverStatus(object):
 
     def get_mode_time(self):
         return time.time() - self.current_mode_time[0]
+
+    def is_left_front_open(self):
+        li_open = self.na.is_area_open(nav.L_IMPACT_NAME)
+        lfc_open = self.na.is_area_open(nav.L_FRONT_CLOSE_NAME)
+        return li_open and lfc_open
+
+    def is_right_front_open(self):
+        ri_open = self.na.is_area_open(nav.R_IMPACT_NAME)
+        rfc_open = self.na.is_area_open(nav.R_FRONT_CLOSE_NAME)
+        return ri_open and rfc_open
+
+    def is_left_front_blocked(self):
+        li_block = self.na.is_area_blocked(nav.L_IMPACT_NAME)
+        lfc_block = self.na.is_area_blocked(nav.L_FRONT_CLOSE_NAME)
+        return li_block or lfc_block
+
+    def is_right_front_blocked(self):
+        ri_block = self.na.is_area_blocked(nav.R_IMPACT_NAME)
+        rfc_block = self.na.is_area_blocked(nav.R_FRONT_CLOSE_NAME)
+        return ri_block or rfc_block
