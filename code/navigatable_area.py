@@ -6,7 +6,7 @@ from rectangle import Rectangle
 L_IMPACT = Rectangle(151, 135, 159, 154)
 # Left area ahead of impact area, to detect front edge
 L_FRONT_CLOSE = Rectangle(151, 125, 159, 134)
-L_FRONT_FAR = Rectangle(151, 105, 159, 124)
+L_FRONT_FAR = Rectangle(151, 115, 159, 124)
 # Area left to impact area, to follow edge
 L_EDGE_CLOSE = Rectangle(141, 135, 150, 144)
 L_EDGE_FAR = Rectangle(141, 125, 150, 134)
@@ -16,7 +16,7 @@ L_GUIDE = Rectangle(131, 125, 140, 134)
 R_IMPACT = Rectangle(160, 135, 169, 154)
 # Right area ahead of impact area, to detect front edge
 R_FRONT_CLOSE = Rectangle(160, 125, 169, 134)
-R_FRONT_FAR = Rectangle(160, 105, 169, 124)
+R_FRONT_FAR = Rectangle(160, 115, 169, 124)
 # Area right to impact area, to follow edge
 R_EDGE_CLOSE = Rectangle(170, 135, 179, 144)
 R_EDGE_FAR = Rectangle(170, 125, 179, 134)

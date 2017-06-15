@@ -22,3 +22,4 @@ plt.subplot(212)
 plt.imshow(img2, cmap='gray')
 
 plt.show()
+

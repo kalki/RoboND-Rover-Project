@@ -17,7 +17,7 @@ def convert_to_float(string_to_convert):
 
 def update_rover(rover, data):
     # Initialize start time and sample positions
-    if rover.start_time == None:
+    if rover.start_time is None:
         rover.start_time = time.time()
         rover.total_time = 0
         samples_xpos = np.int_([convert_to_float(pos.strip()) for pos in data["samples_x"].split(';')])
@@ -86,8 +86,11 @@ def create_output_images(rover):
     plotmap = np.zeros_like(rover.worldmap)
     plotmap[:, :, 0] = obstacle
     plotmap[:, :, 2] = navigable
+
     plotmap = plotmap.clip(0, 255)
+
     # Overlay obstacle and navigable terrain map with ground truth map
+
     map_add = cv2.addWeighted(plotmap, 1, rover.ground_truth, 0.5, 0)
 
     # Check whether any rock detections are present in worldmap

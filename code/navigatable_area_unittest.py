@@ -76,7 +76,7 @@ class TestStringMethods(unittest.TestCase):
         nav.render_image(img, nav.L_IMPACT, 255)
         self.assertEqual(255, img[li.y1 + 1, li.x1 + 1], "Verify clip")
 
-        nav.render_image(img, nav.L_IMPACT, 255, None, None)
+        nav.render_image(img, 255, None, None)
         self.assertEqual(510, img[li.y1 + 1, li.x1 + 1], "Verify not clip")
 
     def test_navable_percent(self):

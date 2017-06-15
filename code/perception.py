@@ -12,8 +12,8 @@ import navigatable_area as nav
 #  for color threshold of navigatable, all channels greater than specified value will be considered as navigatable
 # ROCK_THRESHOLD
 #  for color threshold of rock, sum of red and green channel must greater than n times of blue channel.
-VIEW_WINDOW_DISTANCE = 75
-NAVIGATABLE_THRESHOLD = (150, 150, 150)
+VIEW_WINDOW_DISTANCE = 40
+NAVIGATABLE_THRESHOLD = (160, 160, 160)
 ROCK_THRESHOLD = (120, 3)
 BORDER_MASK = (0, 0, 255)
 IMG_WIDTH = 320
@@ -25,7 +25,7 @@ def get_perspect_transform_wrapper():
     __bottom_offset = 6
     __img_width = IMG_WIDTH
     __img_height = IMG_HEIGHT
-    __source = np.float32([[14, 140], [310, 140], [200, 96], [118, 96]])
+    __source = np.float32([[14, 140], [301, 140], [200, 96], [118, 96]])
     __destination = np.float32([[__img_width / 2 - __dst_size, __img_height - __bottom_offset],
                                 [__img_width / 2 + __dst_size, __img_height - __bottom_offset],
                                 [__img_width / 2 + __dst_size, __img_height - 2 * __dst_size - __bottom_offset],
@@ -193,21 +193,32 @@ def perception_step(rover):
     __xpix_o, __ypix_o = rover_coords(__obstacles)
     __xpix_o_ns, __ypix_o_ns = filter_by_polar_distance(__xpix_o, __ypix_o, VIEW_WINDOW_DISTANCE)
     __xwd_o_ns, __ywd_o_ns = pix_to_world(__xpix_o_ns, __ypix_o_ns, __x, __y, __yaw, __world_size, __scale)
-    rover.worldmap[__ywd_o_ns, __xwd_o_ns, 0] += 10
+    rover.temp_worldmap[__ywd_o_ns, __xwd_o_ns, 0] += 1
 
     # Update navigatable to green channel of world map
     __xpix_n, __ypix_n = rover_coords(__navigatable)
-    __xpix_n_ns, __ypix_n_ns = filter_by_polar_distance(__xpix_n, __ypix_n, VIEW_WINDOW_DISTANCE / 2)
+    __xpix_n_ns, __ypix_n_ns = filter_by_polar_distance(__xpix_n, __ypix_n, VIEW_WINDOW_DISTANCE)
     __xwd_n_ns, __ywd_n_ns = pix_to_world(__xpix_n_ns, __ypix_n_ns, __x, __y, __yaw, __world_size, __scale)
-    rover.worldmap[__ywd_n_ns, __xwd_n_ns, 2] += 10
+    rover.temp_worldmap[__ywd_n_ns, __xwd_n_ns, 2] += 1
 
     # Update rock to blue channel of worlf map, and if any value in blue channel, reset red and green channel
     __xpix_r, __ypix_r = rover_coords(__rock)
-    __xpix_r, __ypix_r = filter_by_polar_distance(__xpix_r, __ypix_r, VIEW_WINDOW_DISTANCE / 2)
+    __xpix_r, __ypix_r = filter_by_polar_distance(__xpix_r, __ypix_r, VIEW_WINDOW_DISTANCE)
     __xwd_r, __ywd_r = pix_to_world(__xpix_r, __ypix_r, __x, __y, __yaw, __world_size, __scale)
     rover.worldmap[__ywd_r, __xwd_r, 1] += 10
 
     # Clip value of 3 channels to prevent black area
+    __oa_sel = rover.temp_worldmap[:, :, 0] > 0
+    __na_sel = rover.temp_worldmap[:, :, 2] > 0
+    __oo_sel = rover.temp_worldmap[:, :, 0] > rover.temp_worldmap[:, :, 2]
+    rover.worldmap[:, :, 0] = 0
+    rover.worldmap[__oa_sel, 0] = 255
+    rover.worldmap[__na_sel, 0] = 0
+    rover.worldmap[__oo_sel, 0] = 255
+    rover.worldmap[:, :, 2] = 0
+    rover.worldmap[__na_sel, 2] = 255
+    rover.worldmap[__oo_sel, 2] = 0
+
     rover.worldmap = np.clip(rover.worldmap, 0, 255)
 
     __dist, __angles = to_polar_coords(__xpix_n_ns, __ypix_n_ns)
