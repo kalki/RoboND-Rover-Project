@@ -8,7 +8,6 @@ MODE_STOP = 'stop'
 MODE_ROCK_APPROACH = 'rock_approach'
 MODE_NAVIGATE = 'navigate'
 MODE_FINISH = 'finish'
-
 LEFT_STEEL = 7.5
 RIGHT_STEEL = -7.5
 HARD_LEFT_STEEL = 15
@@ -25,6 +24,8 @@ def get_dist_angle(source, target):
     return __dist, __yaw
 
 
+# Check if 2 poins is close enough to consider as reached
+# Reach neighbour point are consider as reached. It is to avoid major angle change when close to target.
 def is_close(p1, p2):
     __x1 = int(p1[0])
     __y1 = int(p1[1])
@@ -36,6 +37,7 @@ def is_close(p1, p2):
         return False
 
 
+# Class to control reover
 class RoverController(object):
 
     MODE_FORWARD = MODE_FORWARD
@@ -46,8 +48,11 @@ class RoverController(object):
     MODE_ROCK_APPROACH = MODE_ROCK_APPROACH
     MODE_NAVIGATE = MODE_NAVIGATE
     MODE_FINISH = MODE_FINISH
+    # Goal of navigation mode
     goal = [(0, 0)]
+    # First way point of path to goal
     waypoint = [(0, 0)]
+    # Last reached way point
     reached_waypoint = [(0, 0)]
 
     def __init__(self, rover, rover_status):
@@ -63,6 +68,7 @@ class RoverController(object):
         self.rover.throttle = 0
         self.rover.brake = self.rover.brake_set
 
+    # Speed up and no brake is used
     def speed_up(self, speed_rate=1.0):
 
         if self.rover.vel < self.rover.max_vel * speed_rate:
@@ -72,18 +78,23 @@ class RoverController(object):
             self.rover.throttle = 0
             self.rover.brake = 0
 
+    # Speed up with brake to limit speed
     def speed_limit(self, speed_rate=1.0):
 
         if self.rover.vel > self.rover.max_vel * speed_rate * 1.5:
+            # Hard brake when speed is 50% faster that expected
             self.rover.throttle = 0
             self.rover.brake = self.rover.brake_set
         elif self.rover.vel > self.rover.max_vel * speed_rate * 1.1:
+            # Small brake when speed is 10% faster that expected
             self.rover.throttle = 0
             self.rover.brake = self.rover.brake_set * 0.4
-        elif self.rover.vel < self.rover.max_vel * speed_rate * 0.9:
+        elif self.rover.vel < self.rover.max_vel * speed_rate * 1.0:
+            # Throttle when speed is lower than expected
             self.rover.throttle = self.rover.throttle_set
             self.rover.brake = 0
         else:
+            # Do nothing when speed is between 110% to 100%
             self.rover.throttle = 0
             self.rover.brake = 0
 
@@ -143,13 +154,13 @@ class RoverController(object):
 
     def mode_to_follow_left(self):
         print("FOLLOW LEFT EDGE")
-        self.rover_status.reset_status()
+        self.rover_status.clear_snapshot()
         self.rover_status.set_mode_time()
         self.rover.mode = MODE_FOLLOW_LEFT
 
     def mode_to_forward(self):
         print("FORWARD")
-        self.rover_status.reset_status()
+        self.rover_status.clear_snapshot()
         self.rover_status.set_mode_time()
         self.rover.mode = MODE_FORWARD
 
@@ -167,37 +178,46 @@ class RoverController(object):
         self.rover_status.set_mode_time()
         self.rover.mode = MODE_FINISH
 
+    # Automatically set speed/throttle/brake to head to set waypoint
     def head_to_waypoint(self):
 
+        # If waypoint is reached, clear waypoint and wait.
+        # is_close consider reach neighbour of target as reach, to prevent large angle change
         if is_close(self.rover.pos, self.waypoint[0]):
             self.do_nothing()
             self.reached_waypoint[0] = self.waypoint[0]
             self.waypoint[0] = (0, 0)
             print("Way point {:} reached".format(self.reached_waypoint[0]))
         else:
+            # Calculate distance and angle between waypoint and current position, base on map cord
             __t_dist, __t_yaw = get_dist_angle(self.rover.pos, self.waypoint[0])
 
             if __t_yaw < 0:
                 __t_yaw = __t_yaw + 360
             __yaw_diff = (__t_yaw - self.rover.yaw)
 
-            if np.abs(__yaw_diff) > 10 and __t_dist > 10 \
-                    and self.rover_status.is_right_front_open() and self.rover_status.is_left_front_open():
+            # Brake and roatae has enought distance
+            # But if sight is not clear, angle difference must be larger enough and to brake and turn mode
+            __is_sight_clear = self.rover_status.is_right_front_open() and self.rover_status.is_left_front_open()
+            if __t_dist > 10 and ((np.abs(__yaw_diff) > 10 and __is_sight_clear)
+                                  or (np.abs(__yaw_diff) > 45 and not __is_sight_clear)):
+                # Brake if is moving
                 if self.rover.vel > 0.2:
                     self.speed_brake()
+                # Ratate if is stopped
                 else:
                     self.do_nothing()
+                    # Without / 2, it will direction will not be stable
                     self.direction_to_yaw(int(__yaw_diff / 2))
-            elif (not self.rover_status.is_right_front_open() or not self.rover_status.is_left_front_open()) \
-                    and np.abs(__yaw_diff) > 45 and __t_dist > 10:
-                if self.rover.vel > 0.2:
-                    self.speed_brake()
-                else:
-                    self.do_nothing()
-                    self.direction_to_yaw(int(__yaw_diff / 2))
+            # Move forward and rotate if following case:
+            # 1. distance is close
+            # 2. angle difference is small
+            # 3. angle difference is not too large and sight is not clear
             else:
+                # Speed up if distance is long enough
                 if __t_dist > 30:
                     self.speed_up()
+                # Try to slow down without brake, expected 1.0m/s at 5m,
                 elif __t_dist > 5:
                     if self.rover.vel * 10 - 5 > __t_dist:
                         self.rover.brake = 0.0
@@ -205,17 +225,22 @@ class RoverController(object):
                     else:
                         self.rover.brake = 0
                         self.rover.throttle = 0.4
+                # Limit 30% max speed with brake between 2-5m
                 elif __t_dist > 2:
                     self.speed_limit(0.3)
+                # Limit 10% max speed with brake within 2m, it always need to move
                 else:
                     self.speed_limit(0.1)
 
+                # If sight is not clear, over diection with avoid direction
+                # Or us angle difference
                 if not self.rover_status.is_right_front_open() or not self.rover_status.is_left_front_open():
                     if not self.rover_status.is_right_front_open():
                         self.direction_left()
                     else:
                         self.direction_right()
                 else:
+                    # Without / 2, it will direction will not be stable
                     self.direction_to_yaw(int(__yaw_diff / 2))
 
     def set_waypoint(self, waypoint):

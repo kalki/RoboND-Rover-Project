@@ -62,39 +62,18 @@ class TestStringMethods(unittest.TestCase):
 
         self.assertTrue(rg.is_right_to(rec), "Right Guide to Right Edge")
 
-    def test_render_img(self):
-        img1 = np.zeros((200, 10))
-        img2 = np.zeros((10, 300))
-        self.assertEqual(-1, nav.render_image(img1, nav.L_IMPACT, 0), "Invalid shape check")
-        self.assertEqual(-1, nav.render_image(img2, nav.L_IMPACT, 0), "Invalid shape check")
-        img = np.zeros((160, 320))
-        nav.render_image(img, nav.L_IMPACT, 255)
-        li = nav.L_IMPACT
-        self.assertEqual(255, img[li.y1 + 1, li.x1 + 1], "Change in shape")
-        self.assertEqual(0, img[li.y1 - 1, li.x1 - 1], "Not change out of shape")
-
-        nav.render_image(img, nav.L_IMPACT, 255)
-        self.assertEqual(255, img[li.y1 + 1, li.x1 + 1], "Verify clip")
-
-        nav.render_image(img, 255, None, None)
-        self.assertEqual(510, img[li.y1 + 1, li.x1 + 1], "Verify not clip")
-
     def test_navable_percent(self):
         li = nav.L_IMPACT
-        img1 = np.zeros((200, 10))
-        img2 = np.zeros((10, 300))
-        self.assertEqual(-1, nav.render_image(img1, nav.L_IMPACT, 0), "Invalid shape")
-        self.assertEqual(-1, nav.render_image(img2, nav.L_IMPACT, 0), "Invalid shape")
 
         img = np.zeros((160, 320))
-        self.assertEqual(0, nav.navable_percent(img, nav.L_IMPACT), "0%")
+        self.assertEqual(0, nav.nonzero_percent(img, nav.L_IMPACT), "0%")
 
         img = np.ones((160, 320))
-        self.assertEqual(100, nav.navable_percent(img, nav.L_IMPACT), "100%")
+        self.assertEqual(100, nav.nonzero_percent(img, nav.L_IMPACT), "100%")
 
-        i = int((li.x2+1-li.x1)/2+li.x1)
-        img[:, 0:i] = 0
-        self.assertEqual(50, nav.navable_percent(img, nav.L_IMPACT), "50%")
+        i = int((li.y2+1-li.y1)/2+li.y1)
+        img[0:i, :] = 0
+        self.assertEqual(50, nav.nonzero_percent(img, nav.L_IMPACT), "50%")
 
     def test_navigatible_area_object(self):
         name = 'l_edge_close'

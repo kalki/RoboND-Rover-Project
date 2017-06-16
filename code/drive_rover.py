@@ -48,7 +48,7 @@ class RoverState:
         self.nav_dists = None  # Distances of navigable terrain pixels
         self.ground_truth = ground_truth_3d  # Ground truth worldmap
         self.mode = 'forward'  # Current mode (can be forward or stop)
-        self.throttle_set = 0.2  # Throttle setting when accelerating
+        self.throttle_set = 0.3  # Throttle setting when accelerating
         self.brake_set = 10  # Brake setting when braking
         # The stop_forward and go_forward fields below represent total count
         # of navigable terrain pixels.  This is a very crude form of knowing
@@ -56,7 +56,7 @@ class RoverState:
         # get creative in adding new fields or modifying these!
         self.stop_forward = 50  # Threshold to initiate stopping
         self.go_forward = 500  # Threshold to go forward again
-        self.max_vel = 2.0  # Maximum velocity (meters/second)
+        self.max_vel = 3.0  # Maximum velocity (meters/second)
         # Image output from perception step
         # Update this image to display your intermediate analysis steps
         # on screen in autonomous mode
@@ -64,14 +64,17 @@ class RoverState:
         # Worldmap
         # Update this image with the positions of navigable terrain
         # obstacles and rock samples
-        self.worldmap = np.zeros((200, 200, 3), dtype=np.float) 
-        self.temp_worldmap = np.zeros((200, 200, 3), dtype=np.float)
+        self.worldmap = np.zeros((200, 200, 3), dtype=np.float)
         self.samples_pos = None  # To store the actual sample positions
         self.samples_to_find = 0  # To store the initial count of samples
         self.samples_found = 0  # To count the number of samples found
         self.near_sample = 0  # Will be set to telemetry value data["near_sample"]
         self.picking_up = 0  # Will be set to telemetry value data["picking_up"]
         self.send_pickup = False  # Set to True to trigger rock pickup
+
+        # CHANGED: Added world map to keep appears count of map point in rover vision
+        # 0 for obstacles, 1 for navigatable, 2 for navigatable in close range
+        self.temp_worldmap = np.zeros((200, 200, 3), dtype=np.float)
 
 # Initialize our rover
 Rover = RoverState()
@@ -133,6 +136,7 @@ def telemetry(sid, data):
             image_filename = os.path.join(args.image_folder, timestamp)
             image.save('{}.jpg'.format(image_filename))
 
+        # CHANGED: close resource
         image.close()
     else:
         sio.emit('manual', data={}, skip_sid=True)

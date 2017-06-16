@@ -51,6 +51,7 @@ def update_rover(rover, data):
     # Update number of rocks found
     rover.samples_found = rover.samples_to_find - np.int(data["sample_count"])
 
+    # CHANGED: Stop print detail in console
     # print('speed =',Rover.vel, 'position =', Rover.pos, 'throttle =',
     # Rover.throttle, 'steer_angle =', Rover.steer, 'near_sample:', Rover.near_sample,
     # 'picking_up:', data["picking_up"], 'sending pickup:', Rover.send_pickup,
@@ -61,6 +62,7 @@ def update_rover(rover, data):
     buff = BytesIO(base64.b64decode(img_string))
     image = Image.open(buff)
     rover.img = np.asarray(image)
+    # CHANGED: close resource
     buff.close()
 
     # Return updated Rover and separate image for optional saving
@@ -145,6 +147,7 @@ def create_output_images(rover):
     buff = BytesIO()
     pil_img.save(buff, format="JPEG")
     encoded_string1 = base64.b64encode(buff.getvalue()).decode("utf-8")
+    # CHANGED: close resource
     buff.close()
     pil_img.close()
 
@@ -152,6 +155,7 @@ def create_output_images(rover):
     buff = BytesIO()
     pil_img.save(buff, format="JPEG")
     encoded_string2 = base64.b64encode(buff.getvalue()).decode("utf-8")
+    # CHANGED: close resource
     buff.close()
     pil_img.close()
 

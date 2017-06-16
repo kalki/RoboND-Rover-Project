@@ -1,7 +1,15 @@
 import numpy as np
 import math
 
+# Utility class to find path between 2 point on provided image
 
+
+# Search shortest path between start and goal in provided image
+# It use A* search algorithm and has penalty for point close to edge
+#
+# Return is a list of point, start with goal, end with start point.
+# Point is path are in sequence and every 2 point are neighbour on image
+# in 8 directions
 def search_path(image, start, goal):
     __start = (int(start[0]), int(start[1]))
     __goal = (int(goal[0]), int(goal[1]))
@@ -31,13 +39,15 @@ def search_path(image, start, goal):
         __current = __get_smallest_ele(__open_set, __f_score)
         if __current == __goal:
             __path = __reconstruct_path(__came_from, __current)
+            # It is possible to extend path with specified with on navigatable point
+            # But now navigation map is not very accurate and it is possible block rover if path is extend.
             # __path = __extend_path(__path, __g_score)
             return __path
 
         __open_set.remove(__current)
         __closed_set.add(__current)
 
-        __neighbours = __get_neighbouts(__current, __g_score)
+        __neighbours = __get_neighbours(__current, __g_score)
 
         for __neighbour in __neighbours:
             if __neighbour in __closed_set:
@@ -46,10 +56,9 @@ def search_path(image, start, goal):
             if __neighbour not in __open_set:
                 __open_set.add(__neighbour)
 
-            __nn = len(__get_neighbouts(__neighbour, __g_score))
-
+            # Get neighbours, to calculate weight penalty
+            __nn = len(__get_neighbours(__neighbour, __g_score))
             __nn_rate = 1
-
             if __nn < 8:
                 __nn_rate = (8 - __nn) * 2
 
@@ -65,6 +74,8 @@ def search_path(image, start, goal):
     return []
 
 
+# Get point of path which is not overlap with nonzero point in image
+# First point will be return
 def get_fisrt_outside_point(path, img):
 
     __path = path
@@ -84,24 +95,32 @@ def get_fisrt_outside_point(path, img):
     return None
 
 
+# Reduce point from path base on nonzero point in image
+# If 2 point in path has straight line which overlap with non zero point in image, all points between these 2 can be
+# removed.
+# There is no edge penalty in this algorithm since path on navigation map are very narrow sometimes
+# Return a list of point and sequence of input path will be kept. Start point will not be added into return path
 def reduce_path(path, img):
     __goal = path[0]
     __path = [__goal]
-
     __index = 0
     __test1 = __goal
+    # Continue when there are 2 points in path
     while __index + 1 < len(path):
         __test2 = path[__index + 1]
+        # If line between 2 points is overlap with nonzero points, continue try next point
         if is_point_to_point_cover_by_img(__test1, __test2, img):
             __index += 1
+        # Or add current point to return path
         else:
             __path.append(path[__index])
             __test1 = path[__index]
-
     # Do not add start point
     return __path
 
 
+# Check if points of line between 2 points are nonzero in input image
+# Return false is any point of line is 0 in input image
 def is_point_to_point_cover_by_img(p1, p2, img):
     __img = img
     __y, __x = __img.nonzero()
@@ -124,6 +143,7 @@ def is_point_to_point_cover_by_img(p1, p2, img):
     return True
 
 
+# Build a list of point for line between 2 points
 def get_line_from_points(x1, y1, x2, y2):
     __x1 = int(x1)
     __x2 = int(x2)
@@ -194,14 +214,17 @@ def __extend_path(path, image):
     return __new_path
 
 
+# Distance estimation for A* search, use real distance
 def __esti_dist(start, goal):
     return __dist(start, goal)
 
 
+# Distance of 2 points
 def __dist(start, goal):
     return math.sqrt((start[0] - goal[0]) ** 2.0 + (start[1] - goal[1]) ** 2.0)
 
 
+# Find a key with smallest value in map
 def __get_smallest_ele(key_set, value_map):
     smallest_value = 9999.0
     smallest_key = None
@@ -213,7 +236,8 @@ def __get_smallest_ele(key_set, value_map):
     return smallest_key
 
 
-def __get_neighbouts(current, score_map):
+# Get all non zero neighbour in 8 directions
+def __get_neighbours(current, score_map):
     __list = [
         (current[0] - 1, current[1] - 1),
         (current[0] - 1, current[1]),
@@ -224,15 +248,14 @@ def __get_neighbouts(current, score_map):
         (current[0] + 1, current[1]),
         (current[0] + 1, current[1] + 1)
     ]
-
     __list1 = []
     for __ele in __list:
         if __ele in score_map:
             __list1.append(__ele)
-
     return __list1
 
 
+# Method to reconstruct path for A* search
 def __reconstruct_path(route, current):
     __current = current
     __path = [__current]
