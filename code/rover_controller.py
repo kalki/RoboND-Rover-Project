@@ -54,6 +54,8 @@ class RoverController(object):
     waypoint = [(0, 0)]
     # Last reached way point
     reached_waypoint = [(0, 0)]
+    # Last mode
+    last_mode = ['']
 
     def __init__(self, rover, rover_status):
         self.rover = rover
@@ -130,12 +132,13 @@ class RoverController(object):
         self.rover_status.set_mode_time()
         self.rover.mode = MODE_STOP
 
-    def mode_to_turn_fix(self):
-        print("TURN FIX")
+    def mode_to_turn_fix(self, reason):
+        print("TURN FIX {:}".format(reason))
         self.direction_straight()
         self.speed_brake()
         self.rover_status.snapshot()
         self.rover_status.set_mode_time()
+        self.last_mode[0] = self.rover.mode
         self.rover.mode = MODE_TURN_FIX_ANGEL
 
     def mode_to_rock_approach(self):
@@ -163,6 +166,12 @@ class RoverController(object):
         self.rover_status.clear_snapshot()
         self.rover_status.set_mode_time()
         self.rover.mode = MODE_FORWARD
+
+    def mode_to_last_mode(self):
+        print("BACK to {:}".format(self.last_mode[0]))
+        self.rover_status.clear_snapshot()
+        self.rover_status.set_mode_time()
+        self.rover.mode = self.last_mode[0]
 
     def mode_to_navigate(self, goal):
         print("NAVIGATE to: {}".format(goal))
@@ -199,8 +208,9 @@ class RoverController(object):
             # Brake and roatae has enought distance
             # But if sight is not clear, angle difference must be larger enough and to brake and turn mode
             __is_sight_clear = self.rover_status.is_right_front_open() and self.rover_status.is_left_front_open()
-            if __t_dist > 10 and ((np.abs(__yaw_diff) > 10 and __is_sight_clear)
-                                  or (np.abs(__yaw_diff) > 45 and not __is_sight_clear)):
+            if np.abs(__yaw_diff) > 60 \
+                    or __t_dist > 10 and ((np.abs(__yaw_diff) > 10 and __is_sight_clear)
+                                          or (np.abs(__yaw_diff) > 45 and not __is_sight_clear)):
                 # Brake if is moving
                 if self.rover.vel > 0.2:
                     self.speed_brake()
@@ -214,6 +224,7 @@ class RoverController(object):
             # 2. angle difference is small
             # 3. angle difference is not too large and sight is not clear
             else:
+
                 # Speed up if distance is long enough
                 if __t_dist > 30:
                     self.speed_up()
@@ -237,8 +248,14 @@ class RoverController(object):
                 if not self.rover_status.is_right_front_open() or not self.rover_status.is_left_front_open():
                     if not self.rover_status.is_right_front_open():
                         self.direction_left()
-                    else:
+                    elif self.rover_status.is_right_front_blocked():
+                        self.rover.throttle = 0
+                        self.direction_hard_left()
+                    elif not self.rover_status.is_left_front_open():
                         self.direction_right()
+                    elif self.rover_status.is_left_front_blocked():
+                        self.rover.throttle = 0
+                        self.direction_hard_right()
                 else:
                     # Without / 2, it will direction will not be stable
                     self.direction_to_yaw(int(__yaw_diff / 2))

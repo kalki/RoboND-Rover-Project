@@ -118,11 +118,11 @@ class RoverStatus(object):
         self.yaw.append(time.time())
 
     # Update position history and action history, to decide if rover is moving and on same way it travelled before
-    def update_status(self):
+    def update_status(self, force=False):
         __time = time.time()
 
-        # Update only every second
-        if (__time - self.last_update_time[0]) > 1.0:
+        # Update only every second or specified
+        if force or (__time - self.last_update_time[0]) > 1.0:
             __x = self.rover.pos[0]
             __y = self.rover.pos[1]
             __yaw = self.rover.yaw
@@ -198,7 +198,7 @@ class RoverStatus(object):
         rfc_block = self.na.is_area_blocked(nav.R_FRONT_CLOSE_NAME)
         return ri_block or rfc_block
 
-    def is_front_blocked(self):
+    def is_close_front_blocked(self):
         lfc_block = self.na.is_area_blocked(nav.L_FRONT_CLOSE_NAME)
         rfc_block = self.na.is_area_blocked(nav.R_FRONT_CLOSE_NAME)
         return lfc_block and rfc_block
