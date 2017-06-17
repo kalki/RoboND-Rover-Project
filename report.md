@@ -59,11 +59,11 @@ Here is [markdown version](https://github.com/kalki/RoboND-Rover-Project/blob/ma
 Download [video file](https://github.com/kalki/RoboND-Rover-Project/raw/master/output/test_mapping.mp4) here.
  
    
-### Point 1: Obstacle and rock sample identification ###
+## Notebook Point 1: Obstacle and rock sample identification ##
 > Run the functions provided in the notebook on test images (first with the test data provided, next on data you have 
 recorded). Add/modify functions to allow for color selection of obstacles and rock samples.
 
-#### Method ####
+### Method ###
 
 Navigatables, obstables and rocks are handled in differen way.
 
@@ -77,7 +77,7 @@ Navigatables, obstables and rocks are handled in differen way.
     `ROCK_THRESHOLD`), and sum of red and green channel is 3 (second element of `ROCK_THRESHOLD`) times larger than 
     blue channel.
     
-##### Reason to exclude blue in obstacles thresholding #####
+#### Reason to exclude blue in obstacles thresholding ####
 
 After perspective transform, the pixel in warpped image at left bottom and right bottom cornor is black, and it is no
 from real vision. Considering these as obstacles provides following steps inaccurate information and cause inaccurate 
@@ -89,13 +89,13 @@ perspective transform image, then it is easy to eliminate these in thresholding.
 |![Original perspective transformed image][n_image1]  | ![Blue borded perspective transformed image][n_image2] |
   
 
-#### Sample output of color thresholding ####
+### Sample output of color thresholding ###
 
 ![Color thresholding output][n_image3]
 
 Here is a result of color threshold, right top is navigatables, left bottom is obstacles, right bottom is rock.
 
-#### Code Inspect ####
+### Code Inspect ###
 
 Implementation in notebook located in method `color_thresh()` in cell **Color Thresholding**.
 
@@ -122,12 +122,12 @@ prevent devide by 0 error.
 It returns 3 ndarray for navigatables, obstacles and rocks. 
 
 
-### Point 2: Created a worldmap ###
+## Notebook Point 2: Created a worldmap ##
 > Populate the `process_image()` function with the appropriate analysis steps to map pixels identifying navigable 
 terrain, obstacles and rock samples into a worldmap. Run `process_image()` on your test data using the moviepy 
 functions provided to create video output of your result.
 
-#### Method ####
+### Method ###
 
 To create world map, it processes every vision image and do following operations:
 
@@ -138,7 +138,7 @@ To create world map, it processes every vision image and do following operations
 5. Convert filtered rover-centric pixel values to world coords
 6. Update word coords pixel to world map 
 
-##### Reason to filter pixel by viewing distance #####
+#### Reason to filter pixel by viewing distance ####
 
 It is realted to how world map is built. World map build navigatable area base on comaprison of how many times a pixel 
 counted as obstacle or navigatable. The pixel at far side in perspective transformed rover-centric coord image, is 
@@ -149,7 +149,7 @@ The more pixel close to rover, the more information is accurate.
 Now viewing distance is set to 40. I tried several distance setting: no limited,75, 50, 40, 30. It seems 40 got enough 
 accuracy but did not lose too many mapping ability.
  
-##### How world map is build in detail #####
+#### How world map is build in detail ####
 
 The final world map is actually a binary image. It has only 2 values, 0 and 255. One reason is to display image 
 correctly. Another reason is to make path selection logic easier.
@@ -169,7 +169,7 @@ The brief step to create world map after pixel is transformed into world coords:
     it would be navigatable.
 5.  Rocks will be set to world map without any processing. 
 
-#### Sample output of world map ####
+### Sample output of world map ###
 
 ![World map output][n_image5]
 
@@ -187,13 +187,13 @@ Mapped is 87% and it is not close to 100%. There are 2 reasons:
 2.  For any particular world map pixel, it will be considered as obstacles if its numbers counted as obstables is larger
     than 66% of its numbers counted as navigatables.
 
-#### Code Inspect ####
+### Code Inspect ###
 
 Realted code are in 2 cells. Major process is defined in function `process_image` in cell **Write a function to process 
 stored images**. All used functions are defined in cell **Coordinate Transformations**. A `temp_worldmap` property is
 added to data structure `Databucket` in cell **Read in saved data and ground truth map of the world**.
 
-##### Main process #####
+#### Main process ####
 
 `process_image` in cell **Write a function to process stored images**
 
@@ -238,7 +238,7 @@ from temp world map, then calculate world map.
     data.worldmap[na2_sel, 2] = 255
 ```
 
-##### Used functions #####
+#### Used functions ####
 
 Functions in cell **Write a function to process stored images** has no change from class. Only one method 
 `filter_by_polar_distance` is added to do view distance filter.
@@ -303,7 +303,7 @@ minutes and pick up 3 rock (5 rocks is found).
   
 [Download video file here](https://github.com/kalki/RoboND-Rover-Project/raw/master/misc/rover_sim_output.mp4)
 
-#### Open Issues ####
+### Open Issues ###
 
 1.  Sample rock is ignored some times.Rover follow left edge of ground, so it did not pick up rock at right side to 
     prevent break current path. 
@@ -313,10 +313,11 @@ minutes and pick up 3 rock (5 rocks is found).
 4.  Rover can not handle large rocks in the ground very well. Sometimes rover is stuck because rock is actually not in
     camera, it just stuck the rover. But usually rover will figure a way to get out. In 4:30 of provided video, rover 
     is stuck for about 20 seconds.
+    
     ![Rover is stuck][a_image2]
 
 
-### Point 1: Perception and decision ###
+## Rover Sim Point 1: Perception and decision ###
 > Fill in the perception_step() (at the bottom of the perception.py script) and decision_step() (in decision.py) 
 > functions in the autonomous mapping scripts and an explanation is provided in the writeup of how and why these 
 > functions were modified as they were.
@@ -324,12 +325,12 @@ minutes and pick up 3 rock (5 rocks is found).
 Point 1 will be discussed in 2 parts:  perception and decision
 
 
-### Point 1: Perception Part ###
+## Rover Sim Point 1: Perception Part ##
 
 Preception part is almost same as what is done in notebook. Please refer to notebook part about color thresholding and
 world mapping. There are 3 things to be mentioned as followed.
 
-####  Render rock as a dot ####
+###  Render rock as a dot ###
 
 Rock is rendered as a yellow dot in vision image. 
 
@@ -340,12 +341,12 @@ one is a modified version (change rock width to 5 pixel in code), there is a bri
 | --- | ---|
 |![Standard output][a_image4]  | ![Modified output][a_image5] |
 
-##### Reason #####
+#### Reason ####
 
 Reason is to simplify rock detect and pick logic in decision step. Green channel of vision image is used to detect and 
 decide rover direction when picking rock. A single dot is more accurate and easy to calculate then many dots.
     
-##### Code Inspect #####
+#### Code Inspect ####
 
 **`preception.py`**
 
@@ -376,7 +377,7 @@ The `get_closest_rock()` method first translate `rock_img` into rover-centric co
 coords, and get closest one by sorting them by distance. Before return, closest polor coords is translate back to 
 rectanglar coords and camera corrds.
 
-####  Difference in identifing obstacles ####
+###  Difference in identifing obstacles ###
 
 In rover code, pixel with obstacle count > navigatable count will be considered as obstacles. It is different from 
 obstacle count > 60% * navigatable count in notebook. To do this is to make more navigatable pixel to make path find 
@@ -388,15 +389,16 @@ Code is at line 215 of `perception.py`
     __oo_sel = rover.temp_worldmap[:, :, 0] > rover.temp_worldmap[:, :, 1]
 ```
 
-#### Areas highlight in vision image ####
+### Areas highlight in vision image ###
 
 Beside color threshold result updated to vision image, some blocks in vision image are highlighted. These blocks are 
 areas use to detect obstacles ahead of rover to control the rover.
 
-##### Reason #####
+#### Reason ####
 The reason to highlight is to make problem solving easier when watching the rover running.  
     
-##### Code Inspect #####
+#### Code Inspect ####
+
 Code is at line 180 of `perception.py`
 
 ```python
@@ -407,31 +409,31 @@ These highlight will not effect decision since hightlight part only modify red c
 `decision.py` use blue channel (for navigatable) for decision.
 
 
-#### Point 1: Decision Part ####
+## Rover Sim Point 1: Decision Part ##
 
 Decision is seperated into 2 parts: 
 1. expolor map and pick rock sample
 2. decide when to return and return to middle of map
 
-##### To be detailed #####
+### To be detailed ###
 
-#### Output ####
+#### Reason ####
 
 #### Code Inspect ####
 
 
-### Point 2: Rover autonomous mode test ###
+## Rover Sim Point 2: Rover autonomous mode test ##
 
 > Launching in autonomous mode your rover can navigate and map autonomously. Explain your results and how you might 
 > improve them in your writeup.
 
-#### Method ####
+### Method ###
 
-##### To be detailed #####
+#### To be detailed ####
 
-#### Output ####
+### Output ###
 
-#### Code Inspect ####
+### Code Inspect ###
 
 
 ### Further improvement ###
