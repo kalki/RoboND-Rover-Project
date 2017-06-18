@@ -262,6 +262,9 @@ def filter_by_polar_distance(x_pixel, y_pixel, distance):
 [a_image3]: ./misc/rover_sim_vision.png
 [a_image4]: ./misc/rover_sim_rock.png
 [a_image5]: ./misc/rover_sim_rock_large.png
+[a_image6]: ./misc/rover_sim_vision_areas.png
+[a_image7]: ./misc/rover_sim_vision_areas_name.png
+[a_image8]: ./misc/rover_sim_rock_areas.png
 
 ### Notice ###
 
@@ -317,15 +320,13 @@ minutes and pick up 3 rock (5 rocks is found).
     ![Rover is stuck][a_image2]
 
 
-## Rover Sim Point 1: Perception and decision ###
+## Rover Sim Point 1: Perception ###
 > Fill in the perception_step() (at the bottom of the perception.py script) and decision_step() (in decision.py) 
 > functions in the autonomous mapping scripts and an explanation is provided in the writeup of how and why these 
 > functions were modified as they were.
 
-Point 1 will be discussed in 2 parts:  perception and decision
-
-
-## Rover Sim Point 1: Perception Part ##
+Point 1 will be discussed in 2 parts:  perception and decision. This section is only for perception. next section will
+discuss decision.
 
 Preception part is almost same as what is done in notebook. Please refer to notebook part about color thresholding and
 world mapping. There are 3 things to be mentioned as followed.
@@ -341,7 +342,7 @@ one is a modified version (change rock width to 5 pixel in code), there is a bri
 | --- | ---|
 |![Standard output][a_image4]  | ![Modified output][a_image5] |
 
-#### Reason ####
+#### Why just 1 pixel for rock ####
 
 Reason is to simplify rock detect and pick logic in decision step. Green channel of vision image is used to detect and 
 decide rover direction when picking rock. A single dot is more accurate and easy to calculate then many dots.
@@ -394,7 +395,7 @@ Code is at line 215 of `perception.py`
 Beside color threshold result updated to vision image, some blocks in vision image are highlighted. These blocks are 
 areas use to detect obstacles ahead of rover to control the rover.
 
-#### Reason ####
+#### Why highlight ####
 The reason to highlight is to make problem solving easier when watching the rover running.  
     
 #### Code Inspect ####
@@ -411,15 +412,228 @@ These highlight will not effect decision since hightlight part only modify red c
 
 ## Rover Sim Point 1: Decision Part ##
 
-Decision is seperated into 2 parts: 
-1. expolor map and pick rock sample
-2. decide when to return and return to middle of map
+Decision is seperated into several actions. In normal case, rover decision will perform following task 
+1.  Move forward to explore map with default behaivor provided in original code
+2.  If rover find there is not navigatable edge at left side, it start to follow that edge.
+3.  Decide when to return by check if it has been current position with same angle before.
+4.  When it decide to return, it use navigatable map to calculate a path for move from current psosition to predefined
+    return point (100, 90). And then follow the way point to move to return point
 
-### To be detailed ###
+During exploring the map in move forward or follow edge mode, if any rock is found, it will initiate:
+5.  pick rock sample
 
-#### Reason ####
+When rover is stuck for several seconds in move forward or follow edge mode, it will initiate:
+6. Turn right 15 degree and try again to move forward.
+
+When rover has no enough vision to navigate in move forward or follow edge mode, it will initiate:
+7. Stop and turn right until there are enough vision and try again to move forward.
+
+When rover is following left edge and suddenly edge is missing in vision, it will initiate:
+8. Turn left 60 degree to see if there is edge to follow, or switch to normal move forward mode.
+
+In general, if rover is not stable (mean pitch or roll is greater than threshold), rover will do nothing. It is because
+any decision is heavily depends on camera input and input image will not be useful if rover has large pitch or roll. 
+Many actions cuase such problem like brake, stuck or hit by rock. 
+
+
+### Vision detection ###
+
+Many decision are depends on whether vision image are navigatable. Image is devided into several areas to simplify the 
+detection.
+
+Here are areas in real size in vision image. 
+
+![Vision image areas][a_image6]
+
+Here are areas enlarged with name. Real name will be prefix with side like `L_` for left side and `R_` for right side.
+
+![Vision image areas name][a_image7]
+
+Be noticed that left imapct, close front, far front are 1 pixel narraw than right side area. It is to make rover closer 
+to edge. 
+
+#### Why introduce area ####
+
+Create these areas and calculate percentage of navigatables in area seems be most simple and efficient way to decide 
+situation of rover. By defined a threshold for avoid or go, it is easy to define a rule like:
+
+* It there are 70% not navigatable in left front far area, rover needs to turn right
+* It there are 70% not navigatable in left front close and right front close area, rover needs to brake
+ 
+The decision tree in `decision.py` is a list the condition of area navigatable percentage and corresponding action.
+ 
+#### Code Inspect ####
+
+Area detection are implemented in 2 files.
+
+**`navigatable_area.py`**
+
+It defined area and the coords of each area, like `L_IMPACT`, and defined name for area liek `L_IMPACT_NAME`. It 
+defined a list `AREAS` for all defined areas.
+
+It also define the threshold of percentage to decide if area is clear (navigatable > 95%), open (navigatable > 70%), 
+normal (70% > navigatable > 30%), blocked (30% > navigatable). It also defined a class `NavigationArea` to provides 
+methods to check area, like `is_area_clear()`.
+ 
+ `rover_status.py`
+ 
+`rover_status.py` defined class `RoverStatus` and provide a bunch of method like ` is_both_edge_blocked()` to simplify
+and reuse area detection logic, and also make decision tree in `decision.py` more eadable. 
+
+
+### Rover abnormal detection ###
+
+Sometimes rover get stucked by rock and not moving. In move forward, follow edge and navigate mode, it use position 
+history to detect stuck. In rock picking mode, if rover stay in mode for 20 seconds, rover will abandon and move foward.
+
+Rover will record it world map position and yaw every second. If it almost no change in last 8 seconds, it means rover
+is stucked and will trigger action.
+
+To decide if there is change, we use value in last 8 seconds with max difference with 8 seconds average minus the 
+average. If pos change is small than 0.2 and yaw change is small than 2, it is no change. 
+
+#### Why needs abnormal detection ####
+
+When rover get stuck by rock, sometime there is no rock visual on vision image. In below image, rover is stucked but
+vision actually looks normal narrow path. The only way to detect is use rover movement itself.
+  
+![Rover is stuck][a_image2]
+
+The threshold like 0.2 and 2, it just value base on many test.
 
 #### Code Inspect ####
+
+Position recoding is implemented in `update_status()` method in `rover_status.py`. It compare time with last update, if 
+it is more than one second, it update current status to class variables like `x_pos` defined at the begin of class.
+  
+Not moving judgement is implemented in `is_not_moving()` method in `rover_status.py`.
+
+Moving judgement is used in brake situation so it needs to be quick and simple, it is implemented in `is_moving()` 
+method in `rover_status.py` and only check velocity.
+
+
+### When to Return ###
+
+Now it is base on if rover pass same area with same yaw. If rover is stay in such repeat mode for long time, that means
+it is travel on a path it traveled before and it will trigger return operation.
+
+Rover will keep it position and yaw every second, but position is devided by 4 and round, yaw is devided by 30 and 
+round. Current position and yaw after devided and round will be checked, it is happens before, it enter same way mode. 
+If it stay in this mode for 20 seconds, it trigger return.
+ 
+To prevent some stuck trigger return, only action happens before 60 seconds will be used in check. 
+
+#### Why use repeat action to trigger return ####
+
+Without ground truth information, it is diffcult to decide if mapping is done. One method is check if current 
+navigatable map are closed by obstacle map, if any navigatable pixel connected to unknown pixel, that means mapping is
+not finish. 
+
+But this method need to handle navigation very well and need to decide forward angle after reach unmap position. It 
+brings too many uncertainty so a simply method is choosed.
+  
+Rover is always follow left edge, if it start repeat its path, its position and yaw should be similar. Current maximum 
+speed of rover is 2m/s, so position / 4 is enough to group similar movement together. 
+
+#### Code Inspect ####
+
+Action recoding is implemented in `update_status()` method in `rover_status.py`. It build action by devide and round 
+position and yaw, then buffer these actions in class variable Queue `action_buffer` defined at the begin of class. It 
+will pop action from queue when queue contains 60 elements, and put poped action into class variable set 
+`old_action_history` for further checking.
+  
+Action checking is implemented in `is_on_same_way_too_long()` method in `rover_status.py`. It just build current action
+and see if it is in the set `old_action_history`.
+ 
+
+### Follow edge mode ###
+
+In most time, rover is in follow mode. It follow left edge and try to keep a fix distance to edge. 
+
+#### Why follow edge ####
+
+Follow edge is simple way to explore a unknow map when ground is closed and edge in the moddile is very small. Combine
+with origianl forward mode, it works fine for current map. And for more complex map with large edge in the middle of
+map, we can introduce more logic to head to unclosed area when entire edge are explored.
+
+#### Code Inspect ####
+
+Follow edge mode is actually a decision tree build base on expirement, it decide when to left, when to right and when to
+straight base on situation of predefined area at left side of rover.
+
+Decision tree is implemented from line 219 in `decision.py`. Area detection logic is defined in methods in 
+`rover_status.py`, and control logic like turn left, turn right is defined in methods in `rover_control.py`
+
+
+### Move forward mode ###
+
+Move forward mode is basically same as provided in original code with extra abnormal detection. And it also detect if 
+there is edge at left guide area, it will switch to follow mode if detected.
+
+Move forward mode is kept since is is useful as start at the begining and as start after recover from abnormal.  
+
+#### Code Inspect ####
+
+Code is start from line 174 in `decision.py`. It shared not moving handling, repeat action handling, block handling 
+with follow edge mode. And it has its own simple decision tree, just decide when to switch to follow edge mode.  
+
+
+### Rock pick ###
+
+If rock is in predefined area at left side, rover will enter pick mode. Here is area range in visual image:  
+
+![Rock detect areas][a_image8]
+
+The area is not very large but rock at left side eventually should enter this area.
+ 
+The reason ignore rock too far and rock at right side is to keep rover in correct track. Pick rock too far may ignore
+unexplored area at closer left side. Pick rock at right side may cause rover ignore entire area ahead.
+ 
+Current logic may ignore several rock but it is a trade off between ability and complexity of code.
+
+#### Code Inspect ####
+
+Code is start from line 76 in `decision.py`. It basically decide turing angle and speed base on distance and angle of
+rock.
+
+
+### Navigate mode ###
+
+When rover decide to return start point, it set a goal and enter navigate mode. Navigate mode will build a path base on 
+current navigatable map, and set way point and make sure between 2 way points, rover can travel straight.  
+
+#### Path search ####
+
+Path is a A* search algorithm, with edge penalty to make path avoid edge. Now mapping fidelity is about 90% and some 
+not passable area will be marked as navigatable. These area will cause trouble when rover move straight throught them.
+
+Code is implemented in `search_path()` method in `path_finder.py`. It is basically a standard A* search algorithm.
+  
+#### Way point ####
+
+Move one pixel by one pixel is low efficient, reduce path with connected pixel to way point will make rover move more
+efficient.
+
+Way point is build in `reduce_path` method in `path_finder.py`. It find farest points in path which has straight 
+navigatable path to each other.
+
+#### Navigate to way point ####
+
+Basic idea is turn to right direction and set correct speed, when way point is closer, slow down or brake. When one way 
+point is reached, move to next point.
+
+Navigate code loop is start from line 119 in `decision.py`. It decide if goal is reached first, then get current way 
+point. Then try to move to the point. If rover is stucked, it switch to forward mode and try to return later.
+ 
+Control logic to move rover to way point is implemented in `head_to_waypoint()` method in `rover_controller.py`. It 
+calculate angle difference and ask rover to turn, and start moving if angle difference is small enough. It also control 
+speed base on distance and try not to use brake. It also try to avoid not navigatable area.
+
+
+### Find left edge and turn mode ###
+
+Theses 2 modes are similar and they start from line 240 in `decision.py`. One is turn left for 60 degree, and the other
+is turn right for 15 degree. 
 
 
 ## Rover Sim Point 2: Rover autonomous mode test ##
@@ -427,14 +641,57 @@ Decision is seperated into 2 parts:
 > Launching in autonomous mode your rover can navigate and map autonomously. Explain your results and how you might 
 > improve them in your writeup.
 
-### Method ###
+### Test result ###
 
-#### To be detailed ####
+Code has been tested in autonomuos mode several times, Usually rover can explorer entire map by following the edge. 
 
-### Output ###
+Average score is mapped 80% with 90% fidelity. But some times cause by rock blocking, rover may ignore the bottom path
+in the map. 
 
-### Code Inspect ###
+Rover usually pick at least half rocks, depends on rock position, could be more. Rock in the middle of open ground and
+in the deep cornor will be ignore.
 
+Usually rover is able to return to return point.
+
+Entire process usually take more that 10 minutes.
+
+Refer to 
 
 ### Further improvement ###
+
+#### Mapping ####
+
+1.  Current mapping logic by compariing count of obstacle and navigatable is not good enough. Distance should be 
+    consider more. 
+2.  Use entire vision image is not correct, only edge has meaning. For example, a rock will block sight entire area,
+    area behind rock will be consider as obstacles in single image processing, that increase the count of obstacle for
+    those unseen area.
+3.  Pitch and roll during movement could interfere mapping, image transform should consider more of these.
+4.  Need a better way to identify rock in ground. These rock may not be seen by rover's camera when they stop 
+    rover. Depends on rock's shape, it is possible small at the bottom.
+    
+#### Explore ####
+
+1.  With more accurate navigatable map, it could just if map is explored more accurate by check boundary of navigated.
+2.  Rover's speed cound be faster if it can identify rock better and avoid it.
+3.  Rover need to handle hard corder better, by refine area definition and decision tree.
+4.  Rover should introduce right edge follow mode to handle exception case better.
+
+#### Rock ####
+
+1. Consider rock at right side if rover can navigate in very small range.
+2. Get better approching method, avoid obstacles.
+3. In rock picking, handle rock lost in visual better, tolerate short missing. Try to find rock if lost in visual.
+
+#### Navigate ####
+
+1. Handle close distance (with 2 pixel) better, to keep angle stable.
+2. Avoid obstacle better by conisder more vosion image input.
+3. Avoid rock better.
+
+#### Exception ####
+
+1. When rover get stuck, try to do opposite move.
+2. Try to keep original direction if get out from stuck, also mark it on the map tp avoid it later.
+
 
